@@ -72,6 +72,17 @@ install_docker() {
       exit 1
     fi
 
+    if [[ -f /var/lib/pacman/db.lck ]]; then
+      if pgrep -x pacman >/dev/null 2>&1 || pgrep -x pamac >/dev/null 2>&1 || pgrep -x yay >/dev/null 2>&1; then
+        echo "pacman is currently in use by another process."
+        echo "Close package manager app/process, then run ./tahu install again."
+        exit 1
+      fi
+
+      echo "Found stale pacman lock. Removing /var/lib/pacman/db.lck..."
+      $SUDO rm -f /var/lib/pacman/db.lck
+    fi
+
     echo "Installing Docker packages for ${ID} using pacman..."
     $SUDO pacman -Sy --needed --noconfirm docker docker-compose docker-buildx
   else
