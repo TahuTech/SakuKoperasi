@@ -1,0 +1,180 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+detect_compose() {
+  if docker compose version >/dev/null 2>&1; then
+    COMPOSE=(docker compose)
+  elif command -v docker-compose >/dev/null 2>&1; then
+    COMPOSE=(docker-compose)
+  else
+    echo "Error: Docker Compose is not available. Run ./tahu install first."
+    exit 1
+  fi
+}
+
+run_compose() {
+  detect_compose
+  (cd "$ROOT_DIR" && "${COMPOSE[@]}" "$@")
+}
+
+run_manage() {
+  run_compose exec web python manage.py "$@"
+}
+
+install_docker() {
+  if [[ "${OSTYPE:-}" != linux* ]]; then
+    echo "This installer currently supports Linux only."
+    exit 1
+  fi
+
+  if [[ ! -f /etc/os-release ]]; then
+    echo "Cannot detect Linux distribution (/etc/os-release missing)."
+    exit 1
+  fi
+
+  # shellcheck disable=SC1091
+  source /etc/os-release
+
+  local SUDO=""
+  if [[ "${EUID:-$(id -u)}" -ne 0 ]]; then
+    if command -v sudo >/dev/null 2>&1; then
+      SUDO="sudo"
+    else
+      echo "This action needs root privileges. Install sudo or run as root."
+      exit 1
+    fi
+  fi
+
+  if [[ "${ID:-}" == "ubuntu" || "${ID:-}" == "debian" ]]; then
+    if ! command -v apt-get >/dev/null 2>&1; then
+      echo "apt-get not found. Cannot run automatic install."
+      exit 1
+    fi
+
+    echo "Installing Docker Engine and Docker Compose plugin for ${ID}..."
+    $SUDO apt-get update
+    $SUDO apt-get install -y ca-certificates curl gnupg
+    $SUDO install -m 0755 -d /etc/apt/keyrings
+    curl -fsSL "https://download.docker.com/linux/${ID}/gpg" | $SUDO gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+    $SUDO chmod a+r /etc/apt/keyrings/docker.gpg
+
+    echo \
+      "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/${ID} ${VERSION_CODENAME} stable" \
+      | $SUDO tee /etc/apt/sources.list.d/docker.list >/dev/null
+
+    $SUDO apt-get update
+    $SUDO apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+  elif [[ "${ID:-}" == "arch" || "${ID:-}" == "cachyos" || "${ID_LIKE:-}" == *"arch"* ]]; then
+    if ! command -v pacman >/dev/null 2>&1; then
+      echo "pacman not found. Cannot run automatic install."
+      exit 1
+    fi
+
+    echo "Installing Docker packages for ${ID} using pacman..."
+    $SUDO pacman -Sy --needed --noconfirm docker docker-compose docker-buildx
+  else
+    echo "Auto-install is not implemented for distro: ${ID:-unknown}."
+    echo "Please install Docker manually, then rerun ./tahu up."
+    exit 1
+  fi
+
+  if command -v systemctl >/dev/null 2>&1; then
+    $SUDO systemctl enable --now docker || true
+  fi
+
+  if [[ -n "${SUDO}" ]]; then
+    $SUDO usermod -aG docker "$USER" || true
+    echo "Added $USER to docker group. Re-login to apply group changes."
+  fi
+
+  echo "Docker installation finished."
+  docker --version || true
+  docker compose version || true
+}
+
+usage() {
+  cat <<'EOF'
+Usage: ./tahu <action>
+
+Important actions:
+  install    Install Docker (Ubuntu/Debian/Arch/CachyOS)
+  up         Build and start all containers
+  down       Stop and remove containers
+  reset      Stop containers and remove volumes
+  logs       Show logs for all services
+  ps         Show container status
+  migrate    Run Django migrations in web container
+  shell      Open Django shell in web container
+  superuser  Create Django superuser in web container
+  collect    Run collectstatic in web container
+  check      Run Django system checks in web container
+
+Data migration helpers:
+  dump       Export data to data.json from web container
+  loaddata   Import data.json into PostgreSQL from web container
+
+Examples:
+  ./tahu up
+  ./tahu migrate
+  ./tahu logs
+EOF
+}
+
+action="${1:-help}"
+
+case "$action" in
+  install)
+    install_docker
+    ;;
+  up)
+    run_compose up --build -d
+    ;;
+  down)
+    run_compose down
+    ;;
+  reset)
+    run_compose down -v
+    ;;
+  logs)
+    run_compose logs -f
+    ;;
+  ps)
+    run_compose ps
+    ;;
+  migrate)
+    run_manage migrate
+    ;;
+  shell)
+    run_manage shell
+    ;;
+  superuser)
+    run_manage createsuperuser
+    ;;
+  collect)
+    run_manage collectstatic --noinput
+    ;;
+  check)
+    run_manage check
+    ;;
+  dump)
+    run_manage dumpdata --exclude auth.permission --exclude contenttypes > "$ROOT_DIR/sakukoperasi/data.json"
+    echo "Data exported to $ROOT_DIR/sakukoperasi/data.json"
+    ;;
+  loaddata)
+    if [[ ! -f "$ROOT_DIR/sakukoperasi/data.json" ]]; then
+      echo "Error: data.json not found at $ROOT_DIR/sakukoperasi/data.json"
+      exit 1
+    fi
+    run_manage loaddata /app/data.json
+    ;;
+  help|-h|--help)
+    usage
+    ;;
+  *)
+    echo "Unknown action: $action"
+    usage
+    exit 1
+    ;;
+esac

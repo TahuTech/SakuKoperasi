@@ -13,6 +13,77 @@ cd sakukoperasi
 python manage.py runserver
 ```
 
+## Docker Setup (Django + PostgreSQL)
+
+1. Copy environment template:
+
+```bash
+cp .env.example .env
+```
+
+2. Build and start containers:
+
+```bash
+docker-compose up --build
+```
+
+3. Open API/app:
+
+```text
+http://localhost:8000
+```
+
+Useful commands:
+
+```bash
+# stop containers
+docker-compose down
+
+# stop and remove database volume
+docker-compose down -v
+
+# run Django command inside web container
+docker-compose exec web python manage.py createsuperuser
+```
+
+## Docker Shortcut: tahu
+
+This project containt script `tahu` for important shortcut for docker.
+
+1. Grant permission to execute (once time):
+
+```bash
+chmod +x tahu
+```
+
+2. Run Command:
+
+```bash
+./tahu install
+./tahu up
+./tahu migrate
+./tahu logs
+```
+
+Important actions:
+
+```text
+up         Build and start containers
+down       Stop and remove containers
+reset      Stop containers and remove volumes
+logs       Show service logs
+ps         Show service status
+install    Install Docker + Compose (Ubuntu/Debian/Arch/CachyOS)
+migrate    Run Django migrate
+check      Run Django check
+shell      Open Django shell
+superuser  Create Django superuser
+dump       Export data to sakukoperasi/data.json
+loaddata   Import sakukoperasi/data.json
+```
+
+Note: `./tahu install` need root access/sudo
+
 ## PostgreSQL Configuration
 
 This project now uses PostgreSQL instead of SQLite.
