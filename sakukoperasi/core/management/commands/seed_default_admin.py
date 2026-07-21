@@ -23,6 +23,11 @@ class Command(BaseCommand):
             default=os.getenv('DEFAULT_ADMIN_EMAIL', 'admin@sakukoperasi.local'),
             help='Admin email. Default from DEFAULT_ADMIN_EMAIL or "admin@sakukoperasi.local".',
         )
+        parser.add_argument(
+            '--if-not-exists',
+            action='store_true',
+            help='Only create user when missing. If user exists, skip update.',
+        )
 
     def handle(self, *args, **options):
         username = options['username'].strip()
@@ -42,6 +47,10 @@ class Command(BaseCommand):
                 'email': email,
             },
         )
+
+        if options['if_not_exists'] and not created:
+            self.stdout.write(self.style.WARNING(f'Admin user already exists, skipped: {username}'))
+            return
 
         user.email = email
         user.is_staff = True
