@@ -1,0 +1,196 @@
+:root {
+  --sk-bg: #f3f7f6;
+  --sk-bg-soft: #e8f0ec;
+  --sk-surface: #ffffff;
+  --sk-surface-muted: #f7fbf9;
+  --sk-text: #1d2a24;
+  --sk-text-muted: #577064;
+  --sk-border: #c8dbd2;
+  --sk-primary: #1f7a56;
+  --sk-primary-strong: #185f43;
+  --sk-accent: #ef8f1a;
+  --sk-shadow: 0 12px 28px rgba(17, 63, 44, 0.12);
+}
+
+html, body {
+  background: radial-gradient(circle at right top, var(--sk-bg-soft) 0%, var(--sk-bg) 48%, #fcfefd 100%);
+  color: var(--sk-text);
+}
+
+#header {
+  background: linear-gradient(120deg, #184f3a 0%, #1f7a56 62%, #299568 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 16px rgba(16, 60, 41, 0.28);
+}
+
+#branding h1,
+#branding h1 a:link,
+#branding h1 a:visited {
+  color: #ffffff;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+}
+
+#user-tools,
+#user-tools a,
+#user-tools a:visited {
+  color: #e8fff4;
+}
+
+#user-tools a:hover {
+  color: #ffffff;
+  text-decoration: underline;
+}
+
+div.breadcrumbs {
+  background: #eef6f2;
+  border-bottom: 1px solid var(--sk-border);
+  color: var(--sk-text-muted);
+}
+
+#content {
+  padding-top: 18px;
+}
+
+#content-main,
+.module,
+.inline-group,
+.submit-row,
+.dashboard .module,
+.change-form .module {
+  border-radius: 14px;
+}
+
+.module,
+.inline-group,
+.submit-row,
+.object-tools,
+.results,
+.dashboard #content {
+  box-shadow: var(--sk-shadow);
+}
+
+.module,
+.inline-group,
+.submit-row,
+#changelist-filter,
+#changelist .paginator,
+.object-tools,
+.dashboard .module,
+.change-form .module {
+  background: var(--sk-surface);
+  border: 1px solid var(--sk-border);
+}
+
+.module h2,
+.module caption,
+.inline-group h2,
+.dashboard .module caption {
+  background: linear-gradient(135deg, #1d6e4d 0%, #24875f 100%);
+  color: #ffffff;
+  border-radius: 10px 10px 0 0;
+  font-weight: 600;
+}
+
+a:link,
+a:visited {
+  color: #1c6b4c;
+}
+
+a:hover,
+a:focus {
+  color: #14543a;
+}
+
+.button,
+input[type=submit],
+input[type=button],
+.submit-row input,
+a.button {
+  background: linear-gradient(135deg, var(--sk-primary) 0%, #2c976c 100%);
+  color: #ffffff;
+  border: 0;
+  border-radius: 9px;
+  box-shadow: 0 8px 20px rgba(23, 93, 65, 0.22);
+}
+
+.button.default,
+input[type=submit].default,
+.submit-row input.default {
+  background: linear-gradient(135deg, #1a6a4b 0%, #24815b 100%);
+}
+
+.button:hover,
+input[type=submit]:hover,
+input[type=button]:hover,
+.submit-row input:hover,
+a.button:hover {
+  background: linear-gradient(135deg, var(--sk-primary-strong) 0%, #1f7755 100%);
+}
+
+input, textarea, select, .vTextField {
+  border-radius: 8px;
+  border: 1px solid var(--sk-border);
+  background: #fcfffd;
+}
+
+input:focus, textarea:focus, select:focus {
+  border-color: var(--sk-primary);
+  outline: 2px solid rgba(31, 122, 86, 0.18);
+  outline-offset: 1px;
+}
+
+thead th {
+  background: #edf6f1;
+  border-bottom: 1px solid var(--sk-border);
+}
+
+tr:nth-child(even) {
+  background: var(--sk-surface-muted);
+}
+
+#changelist-filter h2 {
+  background: #ecf5f0;
+  color: var(--sk-text);
+  border-bottom: 1px solid var(--sk-border);
+}
+
+.paginator {
+  border-radius: 10px;
+}
+
+.paginator a,
+.paginator .this-page {
+  border-radius: 8px;
+}
+
+.object-tools a:link,
+.object-tools a:visited {
+  background: linear-gradient(135deg, #e88411 0%, var(--sk-accent) 100%);
+  border-radius: 8px;
+}
+
+.object-tools a:hover,
+.object-tools a:focus {
+  background: linear-gradient(135deg, #d5780a 0%, #e08113 100%);
+}
+
+#footer {
+  color: #5e766a;
+}
+
+@media (max-width: 900px) {
+  #header {
+    padding: 14px 10px;
+  }
+
+  #branding h1 {
+    font-size: 18px;
+  }
+
+  .module,
+  .inline-group,
+  .submit-row {
+    border-radius: 10px;
+  }
+}

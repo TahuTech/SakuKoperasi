@@ -28,4 +28,9 @@ else:
 PY
 
 python manage.py migrate --noinput
+
+if [ "${AUTO_SEED_ADMIN:-true}" = "true" ]; then
+    python manage.py seed_default_admin --if-not-exists
+fi
+
 python manage.py runserver 0.0.0.0:8000

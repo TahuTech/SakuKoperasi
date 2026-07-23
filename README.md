@@ -131,3 +131,39 @@ python manage.py migrate
 ```bash
 python manage.py loaddata data.json
 ```
+
+## Seeder Default Admin
+
+From folder `sakukoperasi/`:
+
+```bash
+python manage.py seed_default_admin
+```
+
+Default credential:
+
+```text
+username: admin
+password: admin12345
+email: admin@sakukoperasi.local
+```
+
+Custom credential example:
+
+```bash
+python manage.py seed_default_admin --username superadmin --password SuperSecure123 --email superadmin@example.com
+```
+
+Automatic seeder on container startup:
+
+1. Docker entrypoint runs migrate, then auto-seeds admin.
+2. Auto-seed uses safe mode (`--if-not-exists`), so existing admin is not overwritten.
+
+Environment variables for auto-seed (`.env`):
+
+```bash
+AUTO_SEED_ADMIN=true
+DEFAULT_ADMIN_USERNAME=admin
+DEFAULT_ADMIN_PASSWORD=admin12345
+DEFAULT_ADMIN_EMAIL=admin@sakukoperasi.local
+```
