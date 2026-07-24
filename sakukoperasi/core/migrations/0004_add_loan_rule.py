@@ -17,6 +17,7 @@ class Migration(migrations.Migration):
                 ('loan_type', models.CharField(choices=[('weekly', 'Mingguan'), ('monthly', 'Bulanan')], max_length=10, unique=True)),
                 ('max_loan_amount', models.DecimalField(decimal_places=2, help_text='Maksimal jumlah pinjaman', max_digits=15)),
                 ('max_installments', models.PositiveIntegerField(help_text='Jumlah maksimal cicilan')),
+                ('interest_rate', models.DecimalField(decimal_places=2, help_text='Bunga pinjaman dalam persen (%)', max_digits=5)),
             ],
         ),
     ]
