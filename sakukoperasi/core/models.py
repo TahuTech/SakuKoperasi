@@ -73,3 +73,101 @@ class Member(models.Model):
             self.id_month = f"{normalized_month:04d}"
 
         super().save(*args, **kwargs)
+
+
+class Savings(models.Model):
+    """Akun tabungan anggota."""
+    member = models.OneToOneField(
+        Member,
+        on_delete=models.CASCADE,
+        related_name='savings',
+    )
+    balance = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        default=0,
+        help_text='Saldo tabungan saat ini',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Tabungan {self.member.id_member} - {self.member.name} (Rp {self.balance:,.0f})"
+
+    class Meta:
+        verbose_name_plural = 'Savings'
+
+
+class SavingsTransaction(models.Model):
+    """Detail setiap transaksi tabungan (setor/ambil)."""
+    class TransactionType(models.TextChoices):
+        DEPOSIT = 'deposit', 'Setor'
+        WITHDRAWAL = 'withdrawal', 'Ambil'
+
+    savings = models.ForeignKey(
+        Savings,
+        on_delete=models.CASCADE,
+        related_name='transactions',
+    )
+    transaction_type = models.CharField(
+        max_length=20,
+        choices=TransactionType.choices,
+    )
+    amount = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        help_text='Jumlah uang transaksi',
+    )
+    balance_before = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        help_text='Saldo sebelum transaksi',
+    )
+    balance_after = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        help_text='Saldo sesudah transaksi',
+    )
+    transaction_date = models.DateField(
+        help_text='Tanggal transaksi',
+    )
+    notes = models.TextField(
+        blank=True,
+        help_text='Catatan transaksi (opsional)',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        """Otomatis hitung balance_before dan balance_after, serta update Savings."""
+        from decimal import Decimal
+
+        # Ambil saldo terakhir dari Savings
+        if not self.balance_before:
+            self.balance_before = self.savings.balance
+
+        # Hitung balance_after berdasarkan tipe transaksi
+        if self.transaction_type == self.TransactionType.DEPOSIT:
+            self.balance_after = self.balance_before + Decimal(self.amount)
+        elif self.transaction_type == self.TransactionType.WITHDRAWAL:
+            self.balance_after = self.balance_before - Decimal(self.amount)
+            if self.balance_after < 0:
+                raise ValidationError(
+                    f'Saldo tidak cukup. Saldo tersedia: Rp {self.balance_before:,.0f}'
+                )
+
+        # Simpan transaction
+        super().save(*args, **kwargs)
+
+        # Update saldo di Savings
+        self.savings.balance = self.balance_after
+        self.savings.save(update_fields=['balance', 'updated_at'])
+
+    def __str__(self):
+        return (
+            f"{self.get_transaction_type_display()} - "
+            f"{self.savings.member.id_member} - "
+            f"Rp {self.amount:,.0f} ({self.transaction_date})"
+        )
+
+    class Meta:
+        ordering = ['-transaction_date', '-created_at']
