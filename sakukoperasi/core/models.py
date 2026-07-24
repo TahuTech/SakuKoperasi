@@ -6,32 +6,39 @@ from django.core.validators import RegexValidator
 
 
 class Member(models.Model):
-    id_member = models.CharField(max_length=50, unique=True)
+    id_member = models.CharField(max_length=50, unique=True, verbose_name='ID Anggota')
     id_week = models.CharField(
         max_length=3,
         unique=True,
         blank=True,
-        validators=[RegexValidator(r'^\d{3}$', 'id_week must be exactly 3 digits (001-999).')],
+        verbose_name='ID Mingguan',
+        validators=[RegexValidator(r'^\d{3}$', 'ID mingguan harus tepat 3 digit (001-999).')],
     )
     id_month = models.CharField(
         max_length=4,
         unique=True,
         blank=True,
-        validators=[RegexValidator(r'^\d{4}$', 'id_month must be exactly 4 digits (0001-9999).')],
+        verbose_name='ID Bulanan',
+        validators=[RegexValidator(r'^\d{4}$', 'ID bulanan harus tepat 4 digit (0001-9999).')],
     )
-    name = models.CharField(max_length=255)
-    address = models.TextField()
-    phone_number = models.CharField(max_length=20)
+    name = models.CharField(max_length=255, verbose_name='Nama')
+    address = models.TextField(verbose_name='Alamat')
+    phone_number = models.CharField(max_length=20, verbose_name='Nomor Telepon')
     guaranted_id = models.ForeignKey(
         'self',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name='guaranteed_members',
+        verbose_name='Jaminan dari',
     )
 
     def __str__(self):
         return f"{self.id_member} - {self.name}"
+    
+    class Meta:
+        verbose_name = 'Anggota'
+        verbose_name_plural = 'Anggota'
 
     def save(self, *args, **kwargs):
         if not self.id_week:
@@ -43,14 +50,14 @@ class Member(models.Model):
             )
             next_id = max_id + 1
             if next_id > 999:
-                raise ValidationError('id_week exceeded maximum value 999.')
+                raise ValidationError('ID mingguan sudah mencapai batas maksimal 999.')
             self.id_week = f"{next_id:03d}"
         else:
             if not str(self.id_week).isdigit():
-                raise ValidationError('id_week must contain only numbers.')
+                raise ValidationError('ID mingguan harus berisi hanya angka.')
             normalized = int(self.id_week)
             if normalized < 1 or normalized > 999:
-                raise ValidationError('id_week must be between 001 and 999.')
+                raise ValidationError('ID mingguan harus antara 001 dan 999.')
             self.id_week = f"{normalized:03d}"
 
         if not self.id_month:
@@ -62,14 +69,14 @@ class Member(models.Model):
             )
             next_month = max_month + 1
             if next_month > 9999:
-                raise ValidationError('id_month exceeded maximum value 9999.')
+                raise ValidationError('ID bulanan sudah mencapai batas maksimal 9999.')
             self.id_month = f"{next_month:04d}"
         else:
             if not str(self.id_month).isdigit():
-                raise ValidationError('id_month must contain only numbers.')
+                raise ValidationError('ID bulanan harus berisi hanya angka.')
             normalized_month = int(self.id_month)
             if normalized_month < 1 or normalized_month > 9999:
-                raise ValidationError('id_month must be between 0001 and 9999.')
+                raise ValidationError('ID bulanan harus antara 0001 dan 9999.')
             self.id_month = f"{normalized_month:04d}"
 
         super().save(*args, **kwargs)
@@ -101,6 +108,10 @@ class LoanRule(models.Model):
 
     def __str__(self):
         return f"{self.get_loan_type_display()} - Maks {self.max_loan_amount} / {self.max_installments}x cicilan"
+    
+    class Meta:
+        verbose_name = 'Aturan Pinjaman'
+        verbose_name_plural = 'Aturan Pinjaman'
 
 
 class LoanRateTable(models.Model):
@@ -133,6 +144,8 @@ class LoanRateTable(models.Model):
 
     class Meta:
         unique_together = ('loan_rule', 'loan_amount', 'installment_count')
+        verbose_name = 'Tabel Tarif Pinjaman'
+        verbose_name_plural = 'Tabel Tarif Pinjaman'
 
     def __str__(self):
         return (
@@ -159,7 +172,8 @@ class Savings(models.Model):
         return f"Tabungan {self.member.id_member} - {self.member.name} (Rp {self.balance:,.0f})"
 
     class Meta:
-        verbose_name_plural = 'Savings'
+        verbose_name = 'Tabungan'
+        verbose_name_plural = 'Tabungan'
 
 
 class SavingsTransaction(models.Model):
@@ -235,3 +249,5 @@ class SavingsTransaction(models.Model):
 
     class Meta:
         ordering = ['-transaction_date', '-created_at']
+        verbose_name = 'Transaksi Tabungan'
+        verbose_name_plural = 'Transaksi Tabungan'

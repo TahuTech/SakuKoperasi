@@ -9,6 +9,20 @@ admin.site.index_title = 'Dashboard Admin'
 class MemberAdmin(admin.ModelAdmin):
     list_display = ('id_member', 'name', 'id_week', 'id_month', 'phone_number')
     search_fields = ('id_member', 'name', 'phone_number')
+    fieldsets = (
+        ('Informasi Dasar', {
+            'fields': ('id_member', 'name', 'phone_number', 'address'),
+        }),
+        ('ID Sistem', {
+            'fields': ('id_week', 'id_month'),
+            'description': 'Nomor ID otomatis dihasilkan sistem',
+            'classes': ('collapse',),
+        }),
+        ('Jaminan', {
+            'fields': ('guaranted_id',),
+            'classes': ('collapse',),
+        }),
+    )
 
 
 class SavingsTransactionInline(admin.TabularInline):
