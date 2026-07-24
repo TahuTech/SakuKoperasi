@@ -122,6 +122,11 @@ Important actions:
   collect    Run collectstatic in web container
   check      Run Django system checks in web container
 
+Loan rules management:
+  seed_all               Run all seeders (admin + loan rules)
+  seed_loan_rules        Seed default loan rules and rate tables
+  reseed_loan_rules      Reset and reseed loan rules (destructive)
+
 Data migration helpers:
   dump       Export data to data.json from web container
   loaddata   Import data.json into PostgreSQL from web container
@@ -129,6 +134,7 @@ Data migration helpers:
 Examples:
   ./tahu up
   ./tahu migrate
+  ./tahu seed_loan_rules
   ./tahu logs
 EOF
 }
@@ -179,6 +185,18 @@ case "$action" in
       exit 1
     fi
     run_manage loaddata /app/data.json
+    ;;
+  seed_loan_rules)
+    run_manage seed_loan_rules
+    ;;
+  reseed_loan_rules)
+    run_manage seed_loan_rules --reset
+    ;;
+  seed_all)
+    echo "Running all seeders..."
+    run_manage seed_default_admin --if-not-exists
+    run_manage seed_loan_rules
+    echo "All seeders completed successfully."
     ;;
   help|-h|--help)
     usage
