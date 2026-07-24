@@ -1,5 +1,15 @@
+from django import forms
 from django.contrib import admin
+from django.core.exceptions import ValidationError
+from django.utils.html import format_html
 from .models import Member, Savings, SavingsTransaction
+
+
+def format_rupiah(amount):
+    """Format angka menjadi tampilan Rupiah."""
+    if amount is None:
+        return '-'
+    return f"Rp {amount:,.0f}".replace(',', '.')
 
 admin.site.site_header = 'SakuKoperasi Administration'
 admin.site.site_title = 'SakuKoperasi Admin'
@@ -25,6 +35,36 @@ class MemberAdmin(admin.ModelAdmin):
     )
 
 
+class SavingsAddForm(forms.ModelForm):
+    """Form tambah Tabungan: hanya tampilkan anggota yang belum punya tabungan."""
+
+    class Meta:
+        model = Savings
+        fields = ('member',)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Hanya anggota yang belum memiliki tabungan
+        anggota_dengan_tabungan = Savings.objects.values_list('member_id', flat=True)
+        self.fields['member'].queryset = Member.objects.exclude(
+            id__in=anggota_dengan_tabungan
+        ).order_by('id_member')
+        self.fields['member'].empty_label = '-- Pilih Anggota --'
+        if not self.fields['member'].queryset.exists():
+            self.fields['member'].help_text = (
+                'Semua anggota sudah memiliki akun tabungan, '
+                'atau belum ada anggota yang terdaftar.'
+            )
+
+    def clean_member(self):
+        member = self.cleaned_data.get('member')
+        if member and Savings.objects.filter(member=member).exists():
+            raise ValidationError(
+                f'Anggota {member.id_member} - {member.name} sudah memiliki akun tabungan.'
+            )
+        return member
+
+
 class SavingsTransactionInline(admin.TabularInline):
     """Inline admin untuk SavingsTransaction di dalam Savings."""
     model = SavingsTransaction
@@ -37,41 +77,71 @@ class SavingsTransactionInline(admin.TabularInline):
 @admin.register(Savings)
 class SavingsAdmin(admin.ModelAdmin):
     """Admin untuk menampilkan dan manage tabungan anggota."""
-    list_display = ('member', 'get_member_id', 'balance', 'updated_at')
+    list_display = ('member', 'get_member_id', 'get_balance_rupiah', 'updated_at')
     search_fields = ('member__id_member', 'member__name')
-    readonly_fields = ('balance', 'created_at', 'updated_at')
+    readonly_fields = ('get_balance_rupiah', 'created_at', 'updated_at')
     inlines = [SavingsTransactionInline]
-    
-    fieldsets = (
-        ('Informasi Anggota', {
-            'fields': ('member',),
-        }),
-        ('Saldo Tabungan', {
-            'fields': ('balance', 'updated_at', 'created_at'),
-            'description': 'Saldo otomatis diperbarui saat ada transaksi.',
-        }),
-    )
-    
+    add_form = SavingsAddForm
+
+    def get_form(self, request, obj=None, **kwargs):
+        """Gunakan SavingsAddForm saat menambah, form standar saat mengubah."""
+        if obj is None:
+            kwargs['form'] = SavingsAddForm
+        return super().get_form(request, obj, **kwargs)
+
+    def get_inline_instances(self, request, obj=None):
+        """Sembunyikan inline transaksi saat membuat tabungan baru."""
+        if obj is None:
+            return []
+        return super().get_inline_instances(request, obj)
+
+    def get_fieldsets(self, request, obj=None):
+        if obj is None:
+            # Form tambah: hanya pilih anggota
+            return (
+                ('Buat Akun Tabungan Baru', {
+                    'fields': ('member',),
+                    'description': (
+                        'Pilih anggota yang belum memiliki akun tabungan. '
+                        'Saldo awal dimulai dari Rp 0.'
+                    ),
+                }),
+            )
+        return (
+            ('Informasi Anggota', {
+                'fields': ('member',),
+            }),
+            ('Saldo Tabungan', {
+                'fields': ('get_balance_rupiah', 'updated_at', 'created_at'),
+                'description': 'Saldo otomatis diperbarui saat ada transaksi.',
+            }),
+        )
+
+    def get_readonly_fields(self, request, obj=None):
+        if obj is None:
+            return ()
+        return ('member', 'get_balance_rupiah', 'created_at', 'updated_at')
+
     def get_member_id(self, obj):
         return obj.member.id_member
     get_member_id.short_description = 'ID Anggota'
-    
-    def has_add_permission(self, request):
-        """Savings dibuat otomatis saat Member dibuat, jadi tidak perlu add manual."""
-        return False
-    
+
+    def get_balance_rupiah(self, obj):
+        return format_html('<strong>{}</strong>', format_rupiah(obj.balance))
+    get_balance_rupiah.short_description = 'Saldo'
+
     def has_delete_permission(self, request, obj=None):
-        """Hindari penghapusan akak tabungan."""
+        """Hindari penghapusan akun tabungan."""
         return False
 
 
 @admin.register(SavingsTransaction)
 class SavingsTransactionAdmin(admin.ModelAdmin):
     """Admin untuk menampilkan dan membuat transaksi tabungan."""
-    list_display = ('member_name', 'transaction_type', 'amount', 'balance_before', 'balance_after', 'transaction_date')
+    list_display = ('member_name', 'transaction_type', 'get_amount_rupiah', 'get_balance_before_rupiah', 'get_balance_after_rupiah', 'transaction_date')
     list_filter = ('transaction_type', 'transaction_date', 'created_at')
     search_fields = ('savings__member__id_member', 'savings__member__name')
-    readonly_fields = ('balance_before', 'balance_after', 'created_at')
+    readonly_fields = ('get_balance_before_rupiah', 'get_balance_after_rupiah', 'created_at')
     date_hierarchy = 'transaction_date'
     
     fieldsets = (
@@ -79,7 +149,7 @@ class SavingsTransactionAdmin(admin.ModelAdmin):
             'fields': ('savings', 'transaction_type', 'transaction_date', 'amount'),
         }),
         ('Detail Saldo', {
-            'fields': ('balance_before', 'balance_after'),
+            'fields': ('get_balance_before_rupiah', 'get_balance_after_rupiah'),
             'description': 'Otomatis dihitung saat transaksi disimpan.',
         }),
         ('Catatan', {
@@ -95,7 +165,19 @@ class SavingsTransactionAdmin(admin.ModelAdmin):
     def member_name(self, obj):
         return f"{obj.savings.member.id_member} - {obj.savings.member.name}"
     member_name.short_description = 'Anggota'
-    
+
+    def get_amount_rupiah(self, obj):
+        return format_rupiah(obj.amount)
+    get_amount_rupiah.short_description = 'Jumlah'
+
+    def get_balance_before_rupiah(self, obj):
+        return format_rupiah(obj.balance_before)
+    get_balance_before_rupiah.short_description = 'Saldo Sebelum'
+
+    def get_balance_after_rupiah(self, obj):
+        return format_rupiah(obj.balance_after)
+    get_balance_after_rupiah.short_description = 'Saldo Sesudah'
+
     def get_queryset(self, request):
         """Optimize query dengan select_related."""
         qs = super().get_queryset(request)
