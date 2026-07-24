@@ -73,3 +73,26 @@ class Member(models.Model):
             self.id_month = f"{normalized_month:04d}"
 
         super().save(*args, **kwargs)
+
+
+class LoanRule(models.Model):
+    class LoanType(models.TextChoices):
+        WEEKLY = 'weekly', 'Mingguan'
+        MONTHLY = 'monthly', 'Bulanan'
+
+    loan_type = models.CharField(
+        max_length=10,
+        choices=LoanType.choices,
+        unique=True,
+    )
+    max_loan_amount = models.DecimalField(
+        max_digits=15,
+        decimal_places=2,
+        help_text='Maksimal jumlah pinjaman',
+    )
+    max_installments = models.PositiveIntegerField(
+        help_text='Jumlah maksimal cicilan',
+    )
+
+    def __str__(self):
+        return f"{self.get_loan_type_display()} - Maks {self.max_loan_amount} / {self.max_installments}x cicilan"
